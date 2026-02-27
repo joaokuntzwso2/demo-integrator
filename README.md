@@ -491,6 +491,249 @@ curl http://localhost:9090/bi/reports/latestCsv
 
 ---
 
+# 🐳 Local Setup (Docker-Based Deployment)
+
+This demo runs fully containerized using Docker Compose.
+
+## 📦 Prerequisites
+
+* Docker Desktop (Mac / Linux)
+* Docker Compose
+* Minimum 8GB RAM recommended
+
+> ⚠️ On Apple Silicon (M1/M2/M3 Macs), this demo mixes `linux/amd64` and `linux/arm64` images. Ensure Docker Desktop has Rosetta emulation enabled if needed.
+
+---
+
+# 🛠 First-Time Setup
+
+## 1️⃣ Clone the repository
+
+```bash
+git clone https://github.com/joaokuntzwso2/demo-integrator.git
+cd demo-integrator
+```
+
+---
+
+## 2️⃣ Create BI Configuration File (Required)
+
+Before starting the stack, you must manually create:
+
+```
+demo-bi/Config.toml
+```
+
+Create the file with the following contents:
+
+```toml
+# ---------------------------
+# Your BI app config (demo/bi_order_intelligence)
+# ---------------------------
+MOCK_BASE_URL = "http://mock-backend:8081"
+MI_RUNTIME_URL = "http://mi:9201"
+MI_API_URL = "http://mi:8290"
+BI_PORT = 9090
+
+RECON_INTERVAL_SECONDS = 300
+ANOMALY_BUFFER_MAX = 500
+REPORT_DIR = "/data/reports"
+
+# ---------------------------
+# OPEN AI configs
+# ---------------------------
+OPENAI_API_KEY="YOUR-KEY-GOES-HERE"
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+OPENAI_TEMPERATURE = 0.2
+
+# ---------------------------
+# ICP / Control Plane Agent (ballerinax/wso2.controlplane)
+# ---------------------------
+[ballerinax.wso2.controlplane]
+keyStorePath = "/app/resources/ballerinaKeystore.p12"
+trustStorePath = "/app/resources/ballerinaTruststore.p12"
+icpServicePort = 9264
+
+[ballerinax.wso2.controlplane.dashboard]
+url = "https://icp:9743/dashboard/api"
+heartbeatInterval = 10
+groupId = "demo-local"
+mgtApiUrl = "https://bi:9264/management/"
+```
+
+---
+
+## 🔎 Why This File Is Required
+
+The BI runtime:
+
+* Registers itself to ICP
+* Exposes a secure management API
+* Uses internal keystore/truststore generated at build time
+* Optionally calls OpenAI
+
+Without this file, BI will fail to start due to missing configurable variables.
+
+---
+
+# 🚀 Start the Full Platform
+
+From the project root:
+
+```bash
+docker-compose build --no-cache
+docker-compose up
+```
+
+Or:
+
+```bash
+docker-compose up --build
+```
+
+---
+
+# 🌐 Access Points
+
+| Runtime         | URL                                                                    |
+| --------------- | ---------------------------------------------------------------------- |
+| MI APIs         | [http://localhost:8290](http://localhost:8290)                         |
+| MI Health       | [http://localhost:9201/healthz](http://localhost:9201/healthz)         |
+| SI HTTP Ingress | [http://localhost:8007/OrderEvents](http://localhost:8007/OrderEvents) |
+| BI API          | [http://localhost:9090](http://localhost:9090)                         |
+| ICP Dashboard   | [https://localhost:9743/dashboard](https://localhost:9743/dashboard)   |
+
+> ICP uses HTTPS with self-signed certificates.
+
+---
+
+# 🧭 Verifying ICP in Action
+
+Once all containers are running:
+
+1. Open:
+
+```
+https://localhost:9743/
+```
+
+2. You should see:
+
+* Node: MI
+* Node: SI
+* Node: BI
+* Group: demo-local
+
+3. Trigger activity:
+
+* Send anomaly events
+* Call MI APIs
+* Run BI reconciliation
+* Observe nodes updating heartbeat timestamps
+
+ICP provides:
+
+* Artifact visibility
+* Runtime grouping
+* Health monitoring
+* Management API introspection
+
+---
+
+# 🔐 OpenAI (Optional)
+
+If you want AI decision support enabled:
+
+Edit:
+
+```
+demo-bi/Config.toml
+```
+
+Set:
+
+```toml
+OPENAI_API_KEY="your-key-here"
+```
+
+If empty, BI automatically falls back to deterministic rules.
+
+---
+
+# 📁 Generated Reports
+
+BI automation writes:
+
+```
+demo-bi-data/reports/latest.json
+demo-bi-data/reports/latest.csv
+```
+
+These demonstrate:
+
+* Cross-runtime reconciliation
+* Operational reporting
+* Event-driven + scheduled integration fusion
+
+---
+
+# 🧠 Architectural Significance
+
+This demo is intentionally designed to show:
+
+* API orchestration (MI)
+* Stateful streaming intelligence (SI)
+* Event-driven integration (BI)
+* AI-assisted decisions
+* Scheduled automation
+* Control-plane governance (ICP)
+
+All running as a unified integration fabric.
+
+---
+
+# 🧱 Common Troubleshooting
+
+### BI fails with “dashboard config missing”
+
+Ensure `Config.toml` exists in:
+
+```
+demo-bi/Config.toml
+```
+
+---
+
+### ICP shows internal error
+
+Use:
+
+```
+https://localhost:9743/dashboard
+```
+
+(not root `/`)
+
+---
+
+### SI drops events
+
+Ensure JSON payload matches expected format:
+
+```json
+{
+  "event": {
+    "orderId": "...",
+    "amount": 10000,
+    "customerId": "...",
+    "channel": "...",
+    "correlationId": "..."
+  }
+}
+```
+
+---
+
 # 🎯 What This Demo Proves
 
 ---
@@ -503,15 +746,3 @@ curl http://localhost:9090/bi/reports/latestCsv
 * Unified observability across heterogeneous runtimes
 
 ---
-
-# 🏁 Final Positioning
-
----
-This project demonstrates how WSO2 provides:
-
-* API-led integration (MI)
-* Streaming intelligence (SI)
-* AI + low-code automation (BI)
-* Enterprise observability & governance (ICP)
-
-All operating as a single logical integration platform.
