@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence name="CommonFaultHandler" xmlns="http://ws.apache.org/ns/synapse">
+
+    <!-- Default status if not already set -->
+    <filter xpath="string-length(normalize-space(get-property('axis2','HTTP_SC'))) = 0">
+        <then>
+            <property name="HTTP_SC" scope="axis2" value="502"/>
+        </then>
+        <else/>
+    </filter>
+
+    <!-- Ensure JSON response -->
+    <property name="messageType" scope="axis2" value="application/json"/>
+    <property name="ContentType" scope="axis2" value="application/json"/>
+
+    <!-- Choose detail message -->
+    <filter xpath="string-length(normalize-space(get-property('FAIL_FAST_MESSAGE'))) &gt; 0">
+        <then>
+            <property name="FAULT_DETAIL" scope="default" expression="get-property('FAIL_FAST_MESSAGE')" type="STRING"/>
+        </then>
+        <else>
+            <property name="FAULT_DETAIL" scope="default" expression="get-property('ERROR_MESSAGE')" type="STRING"/>
+        </else>
+    </filter>
+
+    <payloadFactory media-type="json">
+        <format>
+            {
+              "status":"ERROR",
+              "message":"Integration failure",
+              "correlationId":"$1",
+              "detail":"$2"
+            }
+        </format>
+        <args>
+            <arg evaluator="xml" expression="get-property('CORRELATION_ID')"/>
+            <arg evaluator="xml" expression="get-property('FAULT_DETAIL')"/>
+        </args>
+    </payloadFactory>
+
+    <respond/>
+</sequence>

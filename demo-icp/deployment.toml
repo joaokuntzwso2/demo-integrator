@@ -1,0 +1,13 @@
+# ICP uses this to connect to MI management APIs (default admin/admin in demo).
+[mi_super_admin]
+username = "admin"
+password = "admin"
+
+# ICP uses this to connect to SI runtime for artifact/runtime data.
+[si_service_account]
+username = "admin"
+password = "admin"
+
+# Optional
+[heartbeat_config]
+pool_size = 15

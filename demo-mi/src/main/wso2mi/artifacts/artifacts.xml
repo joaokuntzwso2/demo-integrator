@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<artifacts xmlns="http://wso2.org/projects/carbon/carbon.xml">
+
+    <!-- APIs -->
+    <artifact name="OrderAPI_v1" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/api"
+              file="artifacts/apis/OrderAPI_v1.xml"/>
+    <artifact name="OrderAPI_v2" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/api"
+              file="artifacts/apis/OrderAPI_v2.xml"/>
+    <artifact name="ReviewAPI" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/api"
+              file="artifacts/apis/ReviewAPI.xml"/>
+
+    <!-- Endpoints -->
+    <artifact name="ERP_EP" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/endpoint"
+              file="artifacts/endpoints/ERP_EP.xml"/>
+    <artifact name="CRM_EP" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/endpoint"
+              file="artifacts/endpoints/CRM_EP.xml"/>
+    <artifact name="SHIPPING_EP" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/endpoint"
+              file="artifacts/endpoints/SHIPPING_EP.xml"/>
+
+    <!-- Sequences -->
+    <artifact name="CommonFaultHandler" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/CommonFaultHandler.xml"/>
+
+    <artifact name="OrderAPI_v1_In" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/OrderAPI_v1_In.xml"/>
+    <artifact name="OrderAPI_v2_In" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/OrderAPI_v2_In.xml"/>
+
+    <artifact name="Order_Validate_Enrich" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/Order_Validate_Enrich.xml"/>
+    <artifact name="Order_Orchestrate_ERP_CRM" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/Order_Orchestrate_ERP_CRM.xml"/>
+    <artifact name="Order_Async_Store_Shipping" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/Order_Async_Store_Shipping.xml"/>
+
+    <artifact name="Review_Process" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/Review_Process.xml"/>
+
+   <artifact name="ShippingMP_Send_Seq" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+          file="artifacts/sequences/ShippingMP_Send_Seq.xml"/>
+    <!-- MP sequences -->
+    <artifact name="MP_Target_Seq" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/MP_Target_Seq.xml"/>
+    <artifact name="MP_Fault_Seq" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/MP_Fault_Seq.xml"/>
+    <artifact name="MP_Reply_Seq" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/MP_Reply_Seq.xml"/>
+    <artifact name="MP_Deactivate_Seq" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/sequence"
+              file="artifacts/sequences/MP_Deactivate_Seq.xml"/>
+
+    <!-- Message store / processor -->
+    <artifact name="ShippingMS" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/message-store"
+              file="artifacts/message-stores/ShippingMS.xml"/>
+    <artifact name="ShippingMP" groupId="org.wso2.mi.demo" version="1.0.0" type="synapse/message-processor"
+              file="artifacts/message-processors/ShippingMP.xml"/>
+
+</artifacts>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api name="ReviewAPI" context="/" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="POST"
+              uri-template="/review"
+              inSequence="Review_Process"
+              faultSequence="CommonFaultHandler"/>
+</api>

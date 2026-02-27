@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence name="Order_Orchestrate_ERP_CRM" xmlns="http://ws.apache.org/ns/synapse">
+
+    <!-- Ensure JSON -->
+    <property name="messageType" scope="axis2" value="application/json"/>
+
+    <!-- ===================== -->
+    <!-- ERP CALL -->
+    <!-- ===================== -->
+    <header name="x-correlation-id" scope="transport" expression="get-property('CORRELATION_ID')"/>
+    <call>
+        <endpoint key="ERP_EP"/>
+    </call>
+
+    <!-- Capture ERP HTTP status immediately -->
+    <property name="ERP_HTTP_SC" scope="default" expression="get-property('axis2','HTTP_SC')" type="STRING"/>
+
+    <!-- Fail-fast on ERP non-2xx -->
+    <filter xpath="number(get-property('ERP_HTTP_SC')) &gt;= 400">
+        <then>
+            <!-- Preserve desired HTTP code -->
+            <property name="HTTP_SC" scope="axis2" expression="get-property('ERP_HTTP_SC')"/>
+            <!-- Stable message for the fault handler -->
+            <property name="FAIL_FAST_MESSAGE" scope="default"
+                      expression="fn:concat('ERP call failed with HTTP ', get-property('ERP_HTTP_SC'))"/>
+
+            <!-- Use centralized fault handler (no throwError) -->
+            <sequence key="CommonFaultHandler"/>
+            <drop/>
+        </then>
+        <else/>
+    </filter>
+
+    <!-- Store ERP response only if success -->
+    <enrich>
+        <source type="body" clone="true"/>
+        <target type="property" property="ERP_RESP"/>
+    </enrich>
+
+    <!-- Restore original payload before CRM call -->
+    <enrich>
+        <source type="property" property="ORIGINAL_PAYLOAD" clone="true"/>
+        <target type="body"/>
+    </enrich>
+
+    <!-- ===================== -->
+    <!-- CRM CALL -->
+    <!-- ===================== -->
+    <property name="messageType" scope="axis2" value="application/json"/>
+    <header name="x-correlation-id" scope="transport" expression="get-property('CORRELATION_ID')"/>
+    <call>
+        <endpoint key="CRM_EP"/>
+    </call>
+
+    <!-- Capture CRM HTTP status immediately -->
+    <property name="CRM_HTTP_SC" scope="default" expression="get-property('axis2','HTTP_SC')" type="STRING"/>
+
+    <!-- Fail-fast on CRM non-2xx -->
+    <filter xpath="number(get-property('CRM_HTTP_SC')) &gt;= 400">
+        <then>
+            <property name="HTTP_SC" scope="axis2" expression="get-property('CRM_HTTP_SC')"/>
+            <property name="FAIL_FAST_MESSAGE" scope="default"
+                      expression="fn:concat('CRM call failed with HTTP ', get-property('CRM_HTTP_SC'))"/>
+
+            <sequence key="CommonFaultHandler"/>
+            <drop/>
+        </then>
+        <else/>
+    </filter>
+
+    <!-- Store CRM response only if success -->
+    <enrich>
+        <source type="body" clone="true"/>
+        <target type="property" property="CRM_RESP"/>
+    </enrich>
+
+    <!-- ===================== -->
+    <!-- BUILD SUCCESS RESPONSE -->
+    <!-- ===================== -->
+    <payloadFactory media-type="json">
+        <format>
+            {
+              "status":"ACCEPTED",
+              "correlationId":"$1",
+              "order": {
+                "orderId":"$2",
+                "amount": $3,
+                "premium": $4
+              },
+              "erp": $5,
+              "crm": $6
+            }
+        </format>
+        <args>
+            <arg evaluator="xml" expression="get-property('CORRELATION_ID')"/>
+            <arg evaluator="xml" expression="get-property('ORDER_ID')"/>
+            <arg evaluator="xml" expression="get-property('ORDER_AMOUNT')"/>
+            <arg evaluator="xml" expression="get-property('IS_PREMIUM')"/>
+            <arg evaluator="xml" expression="get-property('ERP_RESP')"/>
+            <arg evaluator="xml" expression="get-property('CRM_RESP')"/>
+        </args>
+    </payloadFactory>
+
+</sequence>

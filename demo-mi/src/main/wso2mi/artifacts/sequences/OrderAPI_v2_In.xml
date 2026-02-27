@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence name="OrderAPI_v2_In" onError="CommonFaultHandler" xmlns="http://ws.apache.org/ns/synapse">
+
+    <enrich>
+        <source type="body" clone="true"/>
+        <target type="property" property="ORIGINAL_PAYLOAD"/>
+    </enrich>
+
+    <sequence key="Order_Validate_Enrich"/>
+    <sequence key="Order_Orchestrate_ERP_CRM"/>
+
+    <filter xpath="get-property('IS_PREMIUM') = 'true'">
+        <then>
+            <sequence key="Order_Async_Store_Shipping"/>
+        </then>
+        <else>
+            <log level="custom">
+                <property name="cid" expression="get-property('CORRELATION_ID')"/>
+                <property name="shipping" value="skipped-non-premium-v2"/>
+            </log>
+        </else>
+    </filter>
+
+    <respond/>
+</sequence>

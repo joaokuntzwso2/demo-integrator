@@ -1,0 +1,240 @@
+@App:name("OrderAnomalyDetector")
+@App:description("Receive order events via HTTP, detect anomalies using time windows, call MI Review API, and also publish anomaly events to BI for event/file/reporting flows.")
+
+/* =========================
+   STREAM DEFINITIONS
+   ========================= */
+
+@source(
+    type='http',
+    receiver.url='http://0.0.0.0:8007/OrderEvents',
+    basic.auth.enabled='false',
+    @map(
+        type='json',
+        @attributes(
+            orderId       = '$.event.orderId',
+            amount        = '$.event.amount',
+            customerId    = '$.event.customerId',
+            channel       = '$.event.channel',
+            correlationId = '$.event.correlationId'
+        )
+    )
+)
+define stream OrderEvents (
+    orderId string,
+    amount double,
+    customerId string,
+    channel string,
+    correlationId string
+);
+
+define stream NormalizedOrders (
+    orderId string,
+    amount double,
+    customerId string,
+    channel string,
+    correlationId string,
+    eventTime long
+);
+
+define stream AnomalyAlerts (
+    anomalyType string,
+    orderId string,
+    amount double,
+    customerId string,
+    channel string,
+    correlationId string,
+    eventCount long,
+    windowStartTime long
+);
+
+/* Log anomalies */
+@sink(type='log', prefix='SI_ANOMALY_DETECTED: ', @map(type='passThrough'))
+define stream AnomalyLogStream (
+    anomalyType string,
+    orderId string,
+    amount double,
+    customerId string,
+    channel string,
+    correlationId string,
+    eventCount long,
+    windowStartTime long
+);
+
+/* =========================
+   ACTION SINKS
+   ========================= */
+
+/* Trigger MI Review API (sense-and-act to MI) */
+@sink(
+    type='http',
+    publisher.url='http://mi:8290/review',
+    method='POST',
+    headers="'content-type:application/json','x-correlation-id:{{correlationId}}','x-request-id:{{correlationId}}'",
+    @map(
+        type='json',
+        @payload("""{
+          "orderId":"{{orderId}}",
+          "amount":{{amount}},
+          "anomalyType":"{{anomalyType}}",
+          "customerId":"{{customerId}}",
+          "channel":"{{channel}}",
+          "eventCount":{{eventCount}},
+          "windowStartTime":{{windowStartTime}}
+        }""")
+    )
+)
+define stream MIReviewTriggerStream (
+    anomalyType string,
+    orderId string,
+    amount double,
+    customerId string,
+    channel string,
+    correlationId string,
+    eventCount long,
+    windowStartTime long
+);
+
+/* Publish anomaly events to BI (Event Integration) */
+@sink(
+    type='http',
+    publisher.url='http://bi:9090/bi/events/anomaly',
+    method='POST',
+    headers="'content-type:application/json','x-correlation-id:{{correlationId}}','x-request-id:{{correlationId}}'",
+    @map(
+        type='json',
+        @payload("""{
+          "anomalyType":"{{anomalyType}}",
+          "orderId":"{{orderId}}",
+          "amount":{{amount}},
+          "customerId":"{{customerId}}",
+          "channel":"{{channel}}",
+          "correlationId":"{{correlationId}}",
+          "eventCount":{{eventCount}},
+          "windowStartTime":{{windowStartTime}}
+        }""")
+    )
+)
+define stream BIAnomalyEventOut (
+    anomalyType string,
+    orderId string,
+    amount double,
+    customerId string,
+    channel string,
+    correlationId string,
+    eventCount long,
+    windowStartTime long
+);
+
+/* Optional: log BI publish (helps in demos if BI is down/not started) */
+@sink(type='log', prefix='SI_TO_BI_PUBLISH: ', @map(type='passThrough'))
+define stream BIAnomalyPublishLog (
+    anomalyType string,
+    orderId string,
+    amount double,
+    customerId string,
+    channel string,
+    correlationId string,
+    eventCount long,
+    windowStartTime long
+);
+
+/* =========================
+   QUERIES
+   ========================= */
+
+/* Normalize input safely */
+@info(name='NormalizeOrderEvent')
+from OrderEvents
+select
+    ifThenElse(orderId is null or orderId == '', 'UNKNOWN', orderId) as orderId,
+    amount,
+    ifThenElse(customerId is null or customerId == '', 'ANON', customerId) as customerId,
+    ifThenElse(channel is null or channel == '', 'unknown', channel) as channel,
+    ifThenElse(correlationId is null or correlationId == '', orderId, correlationId) as correlationId,
+    currentTimeMillis() as eventTime
+insert into NormalizedOrders;
+
+/* A) Immediate single high-value anomaly */
+@info(name='DetectImmediateHighValueAnomaly')
+from NormalizedOrders[amount >= 100000]
+select
+    'SINGLE_HIGH_VALUE' as anomalyType,
+    orderId,
+    amount,
+    customerId,
+    channel,
+    correlationId,
+    1L as eventCount,
+    eventTime as windowStartTime
+insert into AnomalyAlerts;
+
+/*
+ B) Burst anomaly:
+ - 3+ orders >= 10000
+ - Within 2-minute batch
+ - One alert per batch
+ - Fully compatible with core Siddhi (no string aggregators)
+*/
+@info(name='DetectBurstHighValueAnomaly')
+from NormalizedOrders#window.timeBatch(2 min)[amount >= 10000]
+select
+    'BURST_HIGH_VALUE' as anomalyType,
+    'BATCH' as orderId,
+    max(amount) as amount,
+    customerId,
+    channel,
+    str:concat(str:concat('burst-', customerId), str:concat('-', channel)) as correlationId,
+    count() as eventCount,
+    min(eventTime) as windowStartTime
+group by customerId, channel
+having count() >= 3L
+insert into AnomalyAlerts;
+
+/* Log anomalies */
+@info(name='LogAnomalies')
+from AnomalyAlerts
+select *
+insert into AnomalyLogStream;
+
+/* Call MI Review API */
+@info(name='TriggerMIReviewAPI')
+from AnomalyAlerts
+select
+    anomalyType,
+    orderId,
+    amount,
+    customerId,
+    channel,
+    correlationId,
+    eventCount,
+    windowStartTime
+insert into MIReviewTriggerStream;
+
+/* Publish anomaly to BI (Event Integration) */
+@info(name='PublishAnomaliesToBI')
+from AnomalyAlerts
+select
+    anomalyType,
+    orderId,
+    amount,
+    customerId,
+    channel,
+    correlationId,
+    eventCount,
+    windowStartTime
+insert into BIAnomalyEventOut;
+
+/* Optional log of BI publish */
+@info(name='LogBIAnomalyPublish')
+from AnomalyAlerts
+select
+    anomalyType,
+    orderId,
+    amount,
+    customerId,
+    channel,
+    correlationId,
+    eventCount,
+    windowStartTime
+insert into BIAnomalyPublishLog;

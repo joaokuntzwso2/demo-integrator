@@ -1,0 +1,28 @@
+# General
+.DS_Store
+*.log
+*.tmp
+
+# Ballerina
+target/
+.ballerina/
+
+# Maven
+target/
+*.class
+
+# Node (if mock-backend uses node)
+node_modules/
+
+# Docker volumes
+demo-bi-data/
+*.pid
+
+# IDE
+.idea/
+.vscode/
+
+# Secrets
+.env
+*.p12
+*.jks

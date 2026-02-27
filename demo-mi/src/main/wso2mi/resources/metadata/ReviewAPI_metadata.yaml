@@ -1,0 +1,10 @@
+---
+key: "ReviewAPI-1.0.0"
+name : "ReviewAPI"
+displayName : "ReviewAPI"
+description: "ReviewAPI"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/reviewapi"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

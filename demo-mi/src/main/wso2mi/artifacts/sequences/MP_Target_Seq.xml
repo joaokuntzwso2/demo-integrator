@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence name="MP_Target_Seq" xmlns="http://ws.apache.org/ns/synapse">
+
+    <property name="OUT_ONLY" scope="default" value="true"/>
+    <property name="OUT_ONLY" scope="axis2" value="true"/>
+
+    <property name="RESPONSE" scope="axis2" action="remove"/>
+
+    <property name="messageType" scope="axis2" value="application/json"/>
+    <property name="ContentType" scope="axis2" value="application/json"/>
+    <property name="HTTP_METHOD" scope="axis2" value="POST"/>
+
+    <header name="x-correlation-id" scope="transport" expression="get-property('CORRELATION_ID')"/>
+
+    <property name="SYNAPSE_REST_API" scope="axis2" action="remove"/>
+    <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+    <property name="REST_FULL_REQUEST_PATH" scope="axis2" action="remove"/>
+    <property name="REST_SUB_REQUEST_PATH" scope="axis2" action="remove"/>
+    <property name="REST_REQUEST_PATH" scope="axis2" action="remove"/>
+
+    <property name="To" scope="axis2" action="remove"/>
+    <property name="ReplyTo" scope="axis2" action="remove"/>
+    <property name="FaultTo" scope="axis2" action="remove"/>
+
+    <property name="RESPONSE" scope="axis2" action="remove"/>
+    <property name="OUT_ONLY" scope="axis2" value="true"/>
+    <send>
+        <endpoint key="SHIPPING_EP"/>
+    </send>
+
+    <drop/>
+</sequence>

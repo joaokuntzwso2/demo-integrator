@@ -1,0 +1,103 @@
+services:
+  mock-backend:
+    platform: linux/arm64
+    build:
+      context: ./mock-backend
+    container_name: mi-demo-mock-backend
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+    networks:
+      - integrator-net
+
+  activemq:
+    platform: linux/amd64
+    image: rmohr/activemq:5.15.9
+    container_name: mi-demo-activemq
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    environment:
+      - ACTIVEMQ_MIN_MEMORY=128
+      - ACTIVEMQ_MAX_MEMORY=512
+    networks:
+      - integrator-net
+
+  icp:
+    platform: linux/amd64
+    image: wso2/wso2-integration-control-plane:1.0.0
+    container_name: mi-demo-icp
+    ports:
+      - "9743:9743" # ICP UI + API (HTTPS)
+    # If you have a deployment.toml, add it back:
+    # volumes:
+    #   - ./demo-icp/deployment.toml:/home/wso2carbon/wso2-integration-control-plane-1.0.0/conf/deployment.toml:ro
+    networks:
+      - integrator-net
+
+  mi:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MI_IMAGE: wso2/wso2mi:4.5.0
+    container_name: mi-demo-mi
+    environment:
+      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC
+    depends_on:
+      - mock-backend
+      - activemq
+      - icp
+    ports:
+      - "8290:8290"
+      - "8253:8253"
+      - "9201:9201"
+      - "9164:9164"
+    networks:
+      - integrator-net
+
+  si:
+    platform: linux/amd64
+    image: wso2/wso2si:4.3.1
+    container_name: mi-demo-si
+    depends_on:
+      - mi
+      - icp
+    ports:
+      - "8007:8007"
+      - "9443:9443"
+    environment:
+      - JAVA_OPTS=-Xms256m -Xmx512m -XX:+UseG1GC
+    volumes:
+      - ./demo-si/siddhi-files:/home/wso2carbon/wso2si-4.3.1/wso2/server/deployment/siddhi-files
+      #- ./demo-si/deployment.yaml:/home/wso2carbon/wso2si-4.3.1/conf/server/deployment.yaml:ro
+    networks:
+      - integrator-net
+
+  bi:
+    platform: linux/arm64
+    build:
+      context: ./demo-bi
+    container_name: mi-demo-bi
+    depends_on:
+      - mi
+      - mock-backend
+      - icp
+    ports:
+      - "9090:9090"
+      - "9264:9264"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ICP_HOST=icp
+      - ICP_PORT=9743
+    volumes:
+      - ./demo-bi-data:/data
+      - ./demo-bi/Config.toml:/app/Config.toml:ro
+    networks:
+      - integrator-net
+
+networks:
+  integrator-net:
+    driver: bridge

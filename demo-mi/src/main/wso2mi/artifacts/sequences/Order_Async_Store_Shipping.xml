@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence name="Order_Async_Store_Shipping" xmlns="http://ws.apache.org/ns/synapse">
+
+    <enrich>
+        <source type="body" clone="true"/>
+        <target type="property" property="MAIN_RESPONSE"/>
+    </enrich>
+
+    <script language="js"><![CDATA[
+        mc.setProperty("SHIPPING_MSG_ID", "" + java.util.UUID.randomUUID().toString());
+    ]]></script>
+
+    <payloadFactory media-type="json">
+        <format>
+            {
+              "shippingMsgId":"$1",
+              "orderId":"$2",
+              "amount": $3,
+              "premium": $4
+            }
+        </format>
+        <args>
+            <arg evaluator="xml" expression="get-property('SHIPPING_MSG_ID')"/>
+            <arg evaluator="xml" expression="get-property('ORDER_ID')"/>
+            <arg evaluator="xml" expression="get-property('ORDER_AMOUNT')"/>
+            <arg evaluator="xml" expression="get-property('IS_PREMIUM')"/>
+        </args>
+    </payloadFactory>
+
+    <header name="x-correlation-id" scope="transport" expression="get-property('CORRELATION_ID')"/>
+
+    <log level="custom">
+        <property name="cid" expression="get-property('CORRELATION_ID')"/>
+        <property name="shippingMsgId" expression="get-property('SHIPPING_MSG_ID')"/>
+        <property name="stage" value="before-store-cleanup"/>
+        <property name="axis2.RESPONSE" expression="get-property('axis2','RESPONSE')"/>
+        <property name="axis2.HTTP_SC" expression="get-property('axis2','HTTP_SC')"/>
+        <property name="axis2.SYNAPSE_REST_API" expression="get-property('axis2','SYNAPSE_REST_API')"/>
+        <property name="axis2.REST_URL_POSTFIX" expression="get-property('axis2','REST_URL_POSTFIX')"/>
+    </log>
+
+    <!-- Remove response coupling -->
+    <property name="RESPONSE" scope="axis2" action="remove"/>
+    <property name="NO_ENTITY_BODY" scope="axis2" action="remove"/>
+    <property name="HTTP_SC" scope="axis2" action="remove"/>
+
+    <!-- Remove REST binding flags -->
+    <property name="SYNAPSE_REST_API" scope="axis2" action="remove"/>
+    <property name="SYNAPSE_REST_API_VERSION" scope="axis2" action="remove"/>
+    <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+    <property name="REST_FULL_REQUEST_PATH" scope="axis2" action="remove"/>
+    <property name="REST_SUB_REQUEST_PATH" scope="axis2" action="remove"/>
+    <property name="REST_REQUEST_PATH" scope="axis2" action="remove"/>
+
+    <property name="SYNAPSE_REST_API" scope="default" action="remove"/>
+    <property name="SYNAPSE_REST_API_VERSION" scope="default" action="remove"/>
+    <property name="REST_URL_POSTFIX" scope="default" action="remove"/>
+    <property name="REST_FULL_REQUEST_PATH" scope="default" action="remove"/>
+    <property name="REST_SUB_REQUEST_PATH" scope="default" action="remove"/>
+    <property name="REST_REQUEST_PATH" scope="default" action="remove"/>
+
+    <!-- Remove addressing leftovers -->
+    <property name="To" scope="axis2" action="remove"/>
+    <property name="ReplyTo" scope="axis2" action="remove"/>
+    <property name="FaultTo" scope="axis2" action="remove"/>
+
+    <!-- Force clean outbound semantics -->
+    <property name="messageType" scope="axis2" value="application/json"/>
+    <property name="ContentType" scope="axis2" value="application/json"/>
+    <property name="HTTP_METHOD" scope="axis2" value="POST"/>
+
+    <!-- (Optional) socket timeouts for MP dispatch -->
+    <property name="CONNECTION_TIMEOUT" scope="axis2" value="15000"/>
+    <property name="SO_TIMEOUT" scope="axis2" value="60000"/>
+
+    <log level="custom">
+        <property name="cid" expression="get-property('CORRELATION_ID')"/>
+        <property name="shippingMsgId" expression="get-property('SHIPPING_MSG_ID')"/>
+        <property name="stage" value="after-cleanup-before-store"/>
+        <property name="axis2.SYNAPSE_REST_API" expression="get-property('axis2','SYNAPSE_REST_API')"/>
+        <property name="axis2.REST_URL_POSTFIX" expression="get-property('axis2','REST_URL_POSTFIX')"/>
+    </log>
+
+    <property name="OUT_ONLY" scope="default" value="true"/>
+    <property name="OUT_ONLY" scope="axis2" value="true"/>
+    <store messageStore="ShippingMS"/>
+
+    <log level="custom">
+        <property name="cid" expression="get-property('CORRELATION_ID')"/>
+        <property name="shippingMsgId" expression="get-property('SHIPPING_MSG_ID')"/>
+        <property name="async" value="stored-to-ShippingMS"/>
+    </log>
+
+    <enrich>
+        <source type="property" property="MAIN_RESPONSE" clone="true"/>
+        <target type="body"/>
+    </enrich>
+
+</sequence>

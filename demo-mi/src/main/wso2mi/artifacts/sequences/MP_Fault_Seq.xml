@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence xmlns="http://ws.apache.org/ns/synapse" name="MP_Fault_Seq">
+    <log level="custom">
+        <property name="mp" value="ShippingMP"/>
+        <property name="event" value="fault-seq-invoked"/>
+        <property name="cid" expression="get-property('CORRELATION_ID')"/>
+        <property name="http_sc_axis2" expression="get-property('axis2','HTTP_SC')"/>
+        <property name="error_code" expression="get-property('ERROR_CODE')"/>
+        <property name="error_message" expression="get-property('ERROR_MESSAGE')"/>
+        <property name="error_detail" expression="get-property('ERROR_DETAIL')"/>
+    </log>
+    <drop/>
+</sequence>

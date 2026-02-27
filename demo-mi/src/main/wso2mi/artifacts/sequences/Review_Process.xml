@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence name="Review_Process" onError="CommonFaultHandler"
+          xmlns="http://ws.apache.org/ns/synapse">
+
+    <property name="messageType" scope="axis2" value="application/json"/>
+
+    <!-- Capture inbound correlation header (if any) -->
+    <property name="IN_CORRELATION_ID" expression="$trp:x-correlation-id" scope="default" type="STRING"/>
+
+    <!-- Ensure CORRELATION_ID exists (use inbound header if present, else generate) -->
+    <script language="js"><![CDATA[
+        var cid = mc.getProperty("CORRELATION_ID");
+        if (!cid || ("" + cid).trim().length === 0) {
+          var hdr = mc.getProperty("IN_CORRELATION_ID");
+          if (hdr && ("" + hdr).trim().length > 0) {
+            cid = "" + hdr;
+          } else {
+            cid = "" + java.util.UUID.randomUUID().toString();
+          }
+          mc.setProperty("CORRELATION_ID", cid);
+        }
+    ]]></script>
+
+    <!-- Propagate correlation id to downstream call -->
+    <header name="x-correlation-id" scope="transport" expression="get-property('CORRELATION_ID')"/>
+
+    <property name="ORDER_ID" expression="json-eval($.orderId)" scope="default" type="STRING"/>
+    <property name="ORDER_AMOUNT" expression="json-eval($.amount)" scope="default" type="STRING"/>
+
+    <log level="custom">
+        <property name="cid" expression="get-property('CORRELATION_ID')"/>
+        <property name="review" value="received"/>
+        <property name="orderId" expression="get-property('ORDER_ID')"/>
+        <property name="amount" expression="get-property('ORDER_AMOUNT')"/>
+    </log>
+
+    <call>
+        <endpoint key="CRM_EP"/>
+    </call>
+
+    <!-- Capture CRM response body safely (avoid json-eval($)) -->
+    <enrich>
+        <source type="body" clone="true"/>
+        <target type="property" property="CRM_REVIEW"/>
+    </enrich>
+
+    <payloadFactory media-type="json">
+        <format>
+            {
+              "status":"REVIEW_TRIGGERED",
+              "correlationId":"$1",
+              "orderId":"$2",
+              "amount": $3,
+              "crm": $4
+            }
+        </format>
+        <args>
+            <arg evaluator="xml" expression="get-property('CORRELATION_ID')"/>
+            <arg evaluator="xml" expression="get-property('ORDER_ID')"/>
+            <arg evaluator="xml" expression="get-property('ORDER_AMOUNT')"/>
+            <arg evaluator="xml" expression="get-property('CRM_REVIEW')"/>
+        </args>
+    </payloadFactory>
+
+    <respond/>
+</sequence>

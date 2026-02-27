@@ -1,0 +1,10 @@
+---
+key: "OrderAPI_v2-1.0.0"
+name : "OrderAPI_v2"
+displayName : "OrderAPI_v2"
+description: "OrderAPI_v2"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/orderapi_v2"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

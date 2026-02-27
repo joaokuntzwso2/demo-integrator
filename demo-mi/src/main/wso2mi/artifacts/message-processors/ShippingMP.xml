@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<messageProcessor class="org.apache.synapse.message.processor.impl.forwarder.ScheduledMessageForwardingProcessor" name="ShippingMP" messageStore="ShippingMS" targetEndpoint="SHIPPING_EP" xmlns="http://ws.apache.org/ns/synapse">
+    <parameter name="client.retry.interval">1000</parameter>
+    <parameter name="message.processor.deactivate.sequence">MP_Deactivate_Seq</parameter>
+    <parameter name="is.active">true</parameter>
+    <parameter name="max.delivery.attempts">10</parameter>
+    <parameter name="message.processor.fault.sequence">MP_Fault_Seq</parameter>
+    <parameter name="store.connection.retry.interval">1000</parameter>
+    <parameter name="max.store.connection.attempts">-1</parameter>
+    <parameter name="max.delivery.drop">Disabled</parameter>
+    <parameter name="interval">1000</parameter>
+    <parameter name="outOnly">true</parameter>
+    <parameter name="target.sequence">MP_Target_Seq</parameter>
+    <parameter name="retry.interval">3000</parameter>
+</messageProcessor>

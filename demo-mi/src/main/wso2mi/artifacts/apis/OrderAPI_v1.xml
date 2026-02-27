@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api name="OrderAPI_v1" context="/v1" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="POST"
+              uri-template="/orders"
+              inSequence="OrderAPI_v1_In"
+              faultSequence="CommonFaultHandler"/>
+</api>

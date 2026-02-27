@@ -1,0 +1,13 @@
+management:
+  icp:
+    reporting:
+      icp:
+        - name: icp
+          enabled: true
+          dashboardURL: "https://icp:9743/dashboard/api/"
+          heartbeatInterval: 5
+          groupID: "demo-si"
+          nodeID: "si-node-1"
+
+wso2.metrics:
+  enabled: true

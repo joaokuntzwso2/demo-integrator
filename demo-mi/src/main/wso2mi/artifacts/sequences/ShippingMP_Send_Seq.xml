@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence xmlns="http://ws.apache.org/ns/synapse" name="ShippingMP_Send_Seq">
+
+    <property name="OUT_ONLY" scope="axis2" value="true"/>
+    <property name="RESPONSE" scope="axis2" action="remove"/>
+
+    <property name="messageType" scope="axis2" value="application/json"/>
+    <property name="ContentType" scope="axis2" value="application/json"/>
+    <property name="HTTP_METHOD" scope="axis2" value="POST"/>
+
+    <header name="x-correlation-id" scope="transport" expression="get-property('CORRELATION_ID')"/>
+
+    <!-- true one-way -->
+    <send>
+        <endpoint key="SHIPPING_EP"/>
+    </send>
+
+    <drop/>
+</sequence>

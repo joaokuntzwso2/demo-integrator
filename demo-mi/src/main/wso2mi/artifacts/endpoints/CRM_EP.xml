@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<endpoint name="CRM_EP" xmlns="http://ws.apache.org/ns/synapse">
+    <http method="post" uri-template="http://mock-backend:8081/crm/normal">
+        <timeout>
+            <duration>3000</duration>
+            <responseAction>fault</responseAction>
+        </timeout>
+        <suspendOnFailure>
+            <initialDuration>2000</initialDuration>
+            <progressionFactor>2.0</progressionFactor>
+            <maximumDuration>30000</maximumDuration>
+        </suspendOnFailure>
+        <markForSuspension>
+            <retriesBeforeSuspension>2</retriesBeforeSuspension>
+            <retryDelay>1000</retryDelay>
+        </markForSuspension>
+    </http>
+</endpoint>

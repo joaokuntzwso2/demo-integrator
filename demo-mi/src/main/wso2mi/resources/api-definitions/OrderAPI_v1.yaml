@@ -1,0 +1,29 @@
+openapi: 3.0.1
+info:
+  title: OrderAPI_v1
+  description: API Definition of OrderAPI_v1
+  version: 1.0.0
+servers:
+- url: http://localhost:8290/v1
+- url: https://localhost:8253/v1
+paths:
+  /orders:
+    post:
+      requestBody:
+        description: Sample Payload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+          application/xml:
+            schema:
+              type: object
+              xml:
+                name: payload
+        required: false
+      responses:
+        default:
+          description: Default response

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence xmlns="http://ws.apache.org/ns/synapse" name="MP_Deactivate_Seq">
+    <log level="custom">
+        <property name="mp" value="ShippingMP"/>
+        <property name="event" value="deactivated"/>
+        <property name="cid" expression="get-property('CORRELATION_ID')"/>
+        <property name="reason" expression="get-property('ERROR_MESSAGE')"/>
+    </log>
+    <drop/>
+</sequence>

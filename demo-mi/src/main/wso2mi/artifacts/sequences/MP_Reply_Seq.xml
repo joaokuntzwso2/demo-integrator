@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence xmlns="http://ws.apache.org/ns/synapse" name="MP_Reply_Seq">
+    <log level="custom">
+        <property name="mp" value="ShippingMP"/>
+        <property name="event" value="reply-seq-invoked"/>
+        <property name="cid" expression="get-property('CORRELATION_ID')"/>
+    </log>
+    <drop/>
+</sequence>

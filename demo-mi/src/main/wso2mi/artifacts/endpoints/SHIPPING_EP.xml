@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<endpoint xmlns="http://ws.apache.org/ns/synapse" name="SHIPPING_EP">
+    <http method="post" uri-template="http://mock-backend:8081/shipping/slow">
+        <timeout>
+            <!-- MUST be > max expected shipping latency -->
+            <duration>30000</duration>
+            <responseAction>fault</responseAction>
+        </timeout>
+
+        <suspendOnFailure>
+            <initialDuration>5000</initialDuration>
+            <progressionFactor>2.0</progressionFactor>
+            <maximumDuration>60000</maximumDuration>
+        </suspendOnFailure>
+
+        <markForSuspension>
+            <retriesBeforeSuspension>2</retriesBeforeSuspension>
+            <retryDelay>2000</retryDelay>
+        </markForSuspension>
+    </http>
+</endpoint>

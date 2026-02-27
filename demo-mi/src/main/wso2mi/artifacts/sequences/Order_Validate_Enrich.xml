@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence name="Order_Validate_Enrich" xmlns="http://ws.apache.org/ns/synapse">
+
+    <!-- Capture inbound correlation header (if any) into a normal property -->
+    <property name="IN_CORRELATION_ID" expression="$trp:x-correlation-id" scope="default" type="STRING"/>
+
+    <!-- Ensure correlation id exists (GraalJS getProperty/setProperty are 1-arg/2-arg respectively) -->
+    <script language="js"><![CDATA[
+        // Read existing correlation id if already set
+        var cid = mc.getProperty("CORRELATION_ID");
+
+        if (!cid || ("" + cid).trim().length === 0) {
+          // Use inbound header if present (copied above)
+          var hdr = mc.getProperty("IN_CORRELATION_ID");
+          if (hdr && ("" + hdr).trim().length > 0) {
+            cid = "" + hdr;
+          } else {
+            cid = "" + java.util.UUID.randomUUID().toString();
+          }
+          mc.setProperty("CORRELATION_ID", cid);
+        }
+    ]]></script>
+
+    <!-- Extract fields first -->
+    <property name="ORDER_ID" expression="json-eval($.orderId)" scope="default" type="STRING"/>
+    <property name="ORDER_AMOUNT" expression="json-eval($.amount)" scope="default" type="STRING"/>
+
+    <!-- Validation -->
+    <filter xpath="string-length(normalize-space(get-property('ORDER_ID'))) = 0 or string-length(normalize-space(get-property('ORDER_AMOUNT'))) = 0">
+        <then>
+            <property name="HTTP_SC" scope="axis2" value="400"/>
+            <payloadFactory media-type="json">
+                <format>
+                    { "status":"INVALID", "message":"orderId and amount are required", "correlationId":"$1" }
+                </format>
+                <args>
+                    <arg evaluator="xml" expression="get-property('CORRELATION_ID')"/>
+                </args>
+            </payloadFactory>
+            <respond/>
+        </then>
+        <else/>
+    </filter>
+
+    <!-- Premium routing flag -->
+    <filter xpath="number(get-property('ORDER_AMOUNT')) &gt; 10000">
+        <then>
+            <property name="IS_PREMIUM" value="true"/>
+        </then>
+        <else>
+            <property name="IS_PREMIUM" value="false"/>
+        </else>
+    </filter>
+
+    <log level="custom">
+        <property name="cid" expression="get-property('CORRELATION_ID')"/>
+        <property name="orderId" expression="get-property('ORDER_ID')"/>
+        <property name="amount" expression="get-property('ORDER_AMOUNT')"/>
+        <property name="premium" expression="get-property('IS_PREMIUM')"/>
+    </log>
+</sequence>
