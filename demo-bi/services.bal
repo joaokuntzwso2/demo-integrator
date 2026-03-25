@@ -1,14 +1,14 @@
+import ballerina/ai;
 import ballerina/http;
 import ballerina/log;
 import ballerina/io;
 
-service /bi on new http:Listener(BI_PORT) {
+service /bi on biListener {
 
     resource function get health() returns json {
         return { status: "OK", runtime: "BI", time: nowIso() };
     }
 
-    // POST /bi/events/anomaly
     resource function post events/anomaly(http:Request req) returns http:Response|error {
         string cid = getCorrelationId(req);
 
@@ -48,7 +48,6 @@ service /bi on new http:Listener(BI_PORT) {
         return res;
     }
 
-    // GET /bi/reports/latest
     resource function get reports/latest() returns http:Response {
         http:Response res = new;
         string path = REPORT_DIR + "/latest.json";
@@ -66,7 +65,6 @@ service /bi on new http:Listener(BI_PORT) {
         return res;
     }
 
-    // GET /bi/reports/latestCsv
     resource function get reports/latestCsv() returns http:Response {
         http:Response res = new;
         string path = REPORT_DIR + "/latest.csv";
@@ -85,7 +83,6 @@ service /bi on new http:Listener(BI_PORT) {
         return res;
     }
 
-    // POST /bi/ai/review
     resource function post ai/review(http:Request req) returns http:Response|error {
         string cid = getCorrelationId(req);
 
@@ -110,30 +107,27 @@ service /bi on new http:Listener(BI_PORT) {
             return bad;
         }
 
-        // External context (mock CRM)
         json crm = check callCrm(ordReq, cid);
 
-        // Local anomaly context
         string customerId = ordReq.customerId ?: "ANON";
         string channel = ordReq.channel ?: "unknown";
         AnomalyStats stats = anomalyStore.recentStats(customerId, channel, 15);
 
-        // --- Decision via OpenAI agent (with fallback rules) ---
         string risk = "LOW";
         string action = "ALLOW";
         string rationale = "No risk indicators.";
         string decisionMode = "FALLBACK_RULES";
 
-        AiDecision|error ai = callOpenAiDecision(ordReq, crm, stats, cid);
-        if ai is AiDecision {
-            risk = ai.risk;
-            action = ai.recommendedAction;
-            rationale = ai.rationale;
+        AiDecision|error aiDecision = callOpenAiDecision(ordReq, crm, stats, cid);
+        if aiDecision is AiDecision {
+            risk = aiDecision.risk;
+            action = aiDecision.recommendedAction;
+            rationale = aiDecision.rationale;
             decisionMode = "OPENAI_AGENT";
         } else {
             _ = log:printWarn("OpenAI decision failed; falling back to rules",
                 correlationId = cid,
-                errorMessage = ai.message()
+                errorMessage = aiDecision.message()
             );
 
             boolean singleHigh = ordReq.amount >= 100000.0;
@@ -154,7 +148,6 @@ service /bi on new http:Listener(BI_PORT) {
             }
         }
 
-        // Act: trigger MI review only when recommended
         json? miReview = ();
         if action == "TRIGGER_MI_REVIEW" {
             miReview = check triggerMiReview(ordReq, cid, risk, stats);
@@ -176,5 +169,12 @@ service /bi on new http:Listener(BI_PORT) {
             decisionMode: decisionMode
         });
         return res;
+    }
+}
+
+service /agente on biListener {
+    resource function post chat(@http:Payload ai:ChatReqMessage request) returns ai:ChatRespMessage|error {
+        string stringResult = check agenteAgent.run(request.message, request.sessionId);
+        return {message: stringResult};
     }
 }

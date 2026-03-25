@@ -35,7 +35,7 @@ type Report record {|
 |};
 
 type AiDecision record {|
-    string risk;               // LOW|MEDIUM|HIGH
-    string recommendedAction;  // ALLOW|ALLOW_BUT_MONITOR|TRIGGER_MI_REVIEW
+    string risk;
+    string recommendedAction;
     string rationale;
 |};

@@ -1,3 +1,4 @@
+import ballerina/ai;
 import ballerina/http;
 
 function callOpenAiDecision(OrderRequest ordReq, json crm, AnomalyStats stats, string cid) returns AiDecision|error {
@@ -10,7 +11,6 @@ function callOpenAiDecision(OrderRequest ordReq, json crm, AnomalyStats stats, s
         "Return ONLY JSON that matches the provided schema. " +
         "Prefer conservative decisions when risk signals exist.";
 
-    // IMPORTANT for Ballerina: quote JSON keys like "type" because `type` is a keyword.
     json schema = {
         "type": "object",
         "additionalProperties": false,
@@ -67,7 +67,6 @@ Return a short rationale.`
     req.setHeader("content-type", "application/json");
     req.setHeader("x-correlation-id", cid);
 
-    // setJsonPayload() is not error-returning in this distribution, so `check` is invalid.
     req.setJsonPayload({
         "model": OPENAI_MODEL,
         "instructions": instructions,
@@ -94,13 +93,12 @@ Return a short rationale.`
     json decisionJson = check decisionText.fromJsonString();
     AiDecision decision = check decisionJson.cloneWithType(AiDecision);
 
-    // Final guardrails (defensive)
     if !(decision.risk == "LOW" || decision.risk == "MEDIUM" || decision.risk == "HIGH") {
         return error("Invalid risk from OpenAI");
     }
     if !(decision.recommendedAction == "ALLOW" ||
-         decision.recommendedAction == "ALLOW_BUT_MONITOR" ||
-         decision.recommendedAction == "TRIGGER_MI_REVIEW") {
+        decision.recommendedAction == "ALLOW_BUT_MONITOR" ||
+        decision.recommendedAction == "TRIGGER_MI_REVIEW") {
         return error("Invalid recommendedAction from OpenAI");
     }
     if decision.rationale.trim().length() == 0 {
@@ -109,3 +107,15 @@ Return a short rationale.`
 
     return decision;
 }
+
+final ai:ShortTermMemory aiShorttermmemory = check new ();
+
+final ai:Agent agenteAgent = check new (
+    systemPrompt = {
+        role: "system",
+        instructions: "You are a fraud-risk workshop assistant. Help users understand BI anomaly events, review decisions, and reports. Be concise, accurate, and operationally useful."
+    },
+    model = agenteModel,
+    tools = [],
+    memory = aiShorttermmemory
+);

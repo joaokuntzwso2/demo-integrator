@@ -17,15 +17,28 @@ KEY_ALIAS="ballerina"
 mkdir -p "${OUT_DIR}"
 
 echo "[BI] Waiting for ICP TLS endpoint ${ICP_HOST}:${ICP_PORT} ..."
+READY=false
 for i in $(seq 1 90); do
   if keytool -printcert -sslserver "${ICP_HOST}:${ICP_PORT}" >/dev/null 2>&1; then
+    READY=true
     break
   fi
+  echo "[BI] ICP not ready yet (${i}/90)"
   sleep 2
 done
 
+if [ "${READY}" != "true" ]; then
+  echo "[BI] ERROR: ICP TLS endpoint ${ICP_HOST}:${ICP_PORT} did not become ready in time."
+  exit 1
+fi
+
 echo "[BI] Fetching ICP certificate ..."
 keytool -printcert -rfc -sslserver "${ICP_HOST}:${ICP_PORT}" > /tmp/icp-cert.pem
+
+if [ ! -s /tmp/icp-cert.pem ]; then
+  echo "[BI] ERROR: ICP certificate fetch returned empty output."
+  exit 1
+fi
 
 echo "[BI] Creating ICP truststore ${ICP_TS}"
 rm -f "${ICP_TS}" || true
@@ -36,7 +49,6 @@ keytool -importcert -noprompt \
   -storetype PKCS12 \
   -storepass "${ICP_PASS}"
 
-# --- Create keystore for BI management API (HTTPS) if missing ---
 if [ ! -f "${KS}" ]; then
   echo "[BI] Creating management keystore ${KS}"
   keytool -genkeypair \
@@ -51,7 +63,6 @@ if [ ! -f "${KS}" ]; then
     -keypass "${STORE_PASS}"
 fi
 
-# --- Create truststore containing the public cert from the keystore ---
 echo "[BI] Creating management truststore ${TS}"
 rm -f "${TS}" || true
 keytool -exportcert -rfc \
